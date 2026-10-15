@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+
+<head>
+
+  <link rel="icon" type="image/png" href="escudo.png">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeStore</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* --- Soporte para imagen de producto (agregado) --- */
+    .ss-thumb {
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    .ss-thumb-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      cursor: zoom-in;
+    }
+
+    .ss-addrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .ss-addrow .add-btn {
+      flex: 1;
+    }
+
+    .ss-qty-picker {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 2px 6px;
+      flex-shrink: 0;
+    }
+
+    .ss-qty-picker .qty-btn {
+      width: 22px;
+      height: 22px;
+      border: none;
+      background: none;
+      font-size: 1rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .ss-qty-picker .qty-val {
+      min-width: 16px;
+      text-align: center;
+      font-size: .88rem;
+    }
+
+    .ss-lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 24px;
+      cursor: zoom-out;
+    }
+
+    .ss-lightbox.open {
+      display: flex;
+    }
+
+    .ss-lightbox img {
+      max-width: 92vw;
+      max-height: 88vh;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .ss-lightbox-close {
+      position: absolute;
+      top: 18px;
+      right: 22px;
+      color: #fff;
+      font-size: 1.6rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* --- Tarjeta clicable hacia el modal de producto --- */
+    .ss-card-open {
+      cursor: pointer;
+    }
+
+    /* --- Modal de producto (galería + reseñas) --- */
+    .ss-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 16, 12, 0.55);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      overflow-y: auto;
+      z-index: 998;
+      padding: 40px 16px;
+    }
+
+    .ss-modal-overlay.open {
+      display: flex;
+    }
+
+    .ss-modal {
+      background: #fff;
+      border-radius: 14px;
+      max-width: 900px;
+      width: 100%;
+      padding: 22px;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    .ss-modal-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: #f2f2f2;
+      font-size: 1.1rem;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .ss-modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 26px;
+    }
+
+    @media (max-width: 720px) {
+      .ss-modal-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .ss-gallery-main {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+    }
+
+    .ss-gallery-main img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      cursor: zoom-in;
+    }
+
+    .ss-gallery-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.9);
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .ss-gallery-nav.prev {
+      left: 10px;
+    }
+
+    .ss-gallery-nav.next {
+      right: 10px;
+    }
+
+    .ss-gallery-thumbs {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .ss-gallery-thumb {
+      width: 54px;
+      height: 54px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid transparent;
+      cursor: pointer;
+      padding: 0;
+      background: #f2f2f2;
+    }
+
+    .ss-gallery-thumb.active {
+      border-color: #a03cf0;
+    }
+
+    .ss-gallery-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .ss-modal-info h2 {
+      font-size: 1.15rem;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+
+    .ss-modal-reviews {
+      margin-top: 26px;
+      border-top: 1px solid #eee;
+      padding-top: 18px;
+    }
+
+    .ss-review-summary {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .ss-review-summary .avg {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    .ss-review-item {
+      padding: 12px 0;
+      border-bottom: 1px solid #f1f1f1;
+    }
+
+    .ss-review-item .who {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .ss-review-item .stars {
+      color: #f0a92e;
+      font-size: 0.85rem;
+    }
+
+    .ss-review-item .date {
+      color: #999;
+      font-size: 0.75rem;
+      margin-left: 6px;
+    }
+
+    .ss-review-item p {
+      font-size: 0.87rem;
+      margin-top: 4px;
+      color: #444;
+    }
+
+    .ss-no-reviews {
+      color: #999;
+      font-size: 0.87rem;
+      padding: 8px 0 16px;
+    }
+
+    .ss-review-form {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px dashed #ddd;
+    }
+
+    .ss-star-input {
+      display: flex;
+      gap: 4px;
+      font-size: 1.5rem;
+      cursor: pointer;
+      margin: 6px 0 12px;
+    }
+
+    .ss-star-input span {
+      color: #ddd;
+    }
+
+    .ss-star-input span.filled {
+      color: #f0a92e;
+    }
+
+    .ss-review-form textarea,
+    .ss-review-form input[type="text"] {
+      width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font: inherit;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+
+    .ss-review-form textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+
+    /* ===================================================== */
+    /* --- Carrito estilo Mercado Libre (agregado) --------- */
+    /* ===================================================== */
+    :root {
+      --ml-blue: #3483fa;
+      --ml-blue-dark: #2968c8;
+      --ml-yellow: #fff159;
+      --ml-green: #00a650;
+      --ml-gray-line: #eee;
+    }
+
+    .cart-select-all {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 2px 14px;
+      border-bottom: 1px solid var(--ml-gray-line);
+      margin-bottom: 6px;
+      font-size: .85rem;
+      color: #333;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .cart-select-all input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--ml-blue);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .cart-empty-selection-note {
+      font-size: .78rem;
+      color: #999;
+      margin-top: 2px;
+    }
+
+    .cart-item {
+      display: grid;
+      grid-template-columns: 20px 60px 1fr auto;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--ml-gray-line);
+    }
+
+    .cart-item-checkbox {
+      display: flex;
+      align-items: flex-start;
+      padding-top: 6px;
+    }
+
+    .cart-item-checkbox input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--ml-blue);
+      cursor: pointer;
+    }
+
+    .cart-item.unselected {
+      opacity: .55;
+    }
+
+    .cart-item .thumb {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .cart-item-info h4 {
+      font-size: .88rem;
+      margin: 0 0 4px;
+      line-height: 1.25;
+      font-weight: 500;
+    }
+
+    .free-badge {
+      display: inline-block;
+      color: var(--ml-green);
+      font-weight: 700;
+      font-size: .72rem;
+      margin-bottom: 3px;
+    }
+
+    .cart-item-subtotal {
+      font-weight: 700;
+      font-size: .92rem;
+      white-space: nowrap;
+      align-self: center;
+      text-align: right;
+    }
+
+    .cart-item-info .qty-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .cart-item-info .qty-row .qty-btn {
+      width: 24px;
+      height: 24px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-size: .9rem;
+      line-height: 1;
+    }
+
+    .cart-item-info .qty-row .qty-val {
+      min-width: 18px;
+      text-align: center;
+      font-size: .85rem;
+    }
+
+    .cart-item-info .remove-link {
+      border: none;
+      background: none;
+      color: var(--ml-blue);
+      font-size: .78rem;
+      cursor: pointer;
+      margin-left: 6px;
+      padding: 0;
+    }
+
+    .cart-item-info .remove-link:hover {
+      text-decoration: underline;
+    }
+
+    .cart-summary-title {
+      font-size: .8rem;
+      color: #777;
+      margin-bottom: 6px;
+    }
+
+    .ml-buy-btn {
+      background: var(--ml-blue) !important;
+      border-color: var(--ml-blue) !important;
+      color: #fff !important;
+      font-weight: 700;
+    }
+
+    .ml-buy-btn:hover:not(:disabled) {
+      background: var(--ml-blue-dark) !important;
+    }
+
+    .ml-buy-btn:disabled {
+      background: #cfd6e0 !important;
+      border-color: #cfd6e0 !important;
+      color: #fff !important;
+      cursor: not-allowed;
+    }
+
+    .ship-progress-note {
+      font-size: .76rem;
+      color: var(--ml-green);
+      background: #eafaf1;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin: 4px 0 12px;
+    }
+
+    /* --- Formulario de tarjeta (agregado) --- */
+    .card-form {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card-form .field label {
+      display: block;
+      font-size: .8rem;
+      color: #555;
+      margin-bottom: 4px;
+    }
+
+    .card-form input {
+      width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
+      box-sizing: border-box;
+    }
+
+    .card-form .row2 {
+      display: flex;
+      gap: 10px;
+    }
+
+    .card-form .row2 .field {
+      flex: 1;
+    }
+
+    .card-brand {
+      color: var(--ml-blue);
+      font-weight: 600;
+      font-size: .78rem;
+    }
+
+    /* --- Ficha OXXO (agregado) --- */
+    .oxxo-note {
+      background: #fff7e6;
+      border: 1px solid #ffe1a8;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: .82rem;
+      color: #8a5a00;
+      margin-top: 14px;
+      line-height: 1.4;
+    }
+
+    .oxxo-ticket {
+      border: 2px dashed #ccc;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      margin: 16px 0;
+    }
+
+    .oxxo-barcode {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 2px;
+      height: 50px;
+      margin-bottom: 10px;
+    }
+
+    .oxxo-barcode span {
+      display: inline-block;
+      background: #222;
+    }
+
+    .oxxo-ref {
+      font-family: 'Courier New', monospace;
+      font-size: 1.15rem;
+      letter-spacing: 2px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="site">
+    <div class="header-row">
+      <div class="logo">
+        <img src="logo.png" alt="SafeStep Store" class="logo-img">
+      </div>
+
+      <div class="search-wrap">
+        <form class="search-form" id="search-form" role="search">
+          <label for="search-input" class="visually-hidden">Buscar productos</label>
+          <input type="text" id="search-input" placeholder="Buscar bastones, sensores, accesorios…" autocomplete="off">
+          <button type="submit" aria-label="Buscar">
+            <svg width="19" height="19" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+        </form>
+        <div class="search-suggest" id="search-suggest"></div>
+      </div>
+
+      <div class="header-actions">
+        <button class="icon-btn" id="btn-addresses">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z" />
+            <circle cx="12" cy="10" r="2.5" />
+          </svg>
+          Direcciones
+        </button>
+        <button class="icon-btn" id="btn-cart">
+          <svg viewBox="0 0 24 24">
+            <circle cx="9" cy="21" r="1.4" />
+            <circle cx="19" cy="21" r="1.4" />
+            <path d="M2.5 3h2l2.2 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H6" />
+          </svg>
+          Carrito
+          <span class="cart-count" id="cart-count" hidden>0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="cat-nav" aria-label="Categorías">
+    <div class="cat-row" id="cat-row"></div>
+  </nav>
+
+  <div class="breadcrumb" id="breadcrumb">SafeStep Store</div>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>Movilidad segura, un paso a la vez</h1>
+        <p>Bastones inteligentes con sensor ToF de detección de obstáculos y sensor MPU6050 de detección de caídas,
+          conectados a la app SafeStep por Bluetooth y GPS.</p>
+      </div>
+      <a class="hero-badge" href="garantia.html">GARANTÍA DE 12 MESES INCLUIDA</a>
+    </section>
+
+    <section class="trust-strip">
+      <div class="trust-item"><span class="ic">🚚</span>
+        <div><b>Envío gratis</b>en compras desde $2000 MXN</div>
+      </div>
+      <div class="trust-item"><span class="ic">📡</span>
+        <div><b>Soporte técnico</b>lunes a sábado: safestepsoporte@gmail.com</div>
+      </div>
+    </section>
+
+    <div class="results-bar">
+      <div>
+        <h2 id="results-title">Todos los productos</h2>
+        <span id="results-count"></span>
+      </div>
+      <select class="sort-select" id="sort-select">
+        <option value="relevance">Más relevantes</option>
+        <option value="price-asc">Menor precio</option>
+        <option value="price-desc">Mayor precio</option>
+        <option value="rating">Mejor calificados</option>
+      </select>
+    </div>
+
+    <div class="grid" id="product-grid"></div>
+    <div class="no-results" id="no-results" hidden>
+      <div class="big">🔍</div>
+      <p>No encontramos resultados. Intenta con otra búsqueda o categoría.</p>
+    </div>
+  </main>
+
+
+  <div class="overlay" id="overlay"></div>
+  <aside class="drawer" id="drawer" aria-label="Carrito y checkout">
+    <div class="drawer-head">
+      <h2 id="drawer-title">Tu carrito</h2>
+      <button class="drawer-close" id="drawer-close" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+    <div class="drawer-foot" id="drawer-foot"></div>
+  </aside>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="ss-lightbox" id="ss-lightbox">
+    <button class="ss-lightbox-close" id="ss-lightbox-close" aria-label="Cerrar">✕</button>
+    <img id="ss-lightbox-img" src="" alt="Vista ampliada del producto">
+  </div>
+
+  <div class="ss-modal-overlay" id="ss-modal-overlay">
+    <div class="ss-modal" id="ss-modal" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <script>
+    /* ============ DATA ============ */
+    const CATEGORIES = [
+      { id: 'all', name: 'Todas', icon: '🛍️' },
+      { id: 'bastones', name: 'Baston SafeStep', icon: '🦯' },
+      { id: 'repuestos', name: 'Repuestos', icon: '🔧' },
+      { id: 'servicios', name: 'Servicios y garantía', icon: '🛡️' },
+    ];
+
+    // productos
+    const PRODUCTS = [
+      {
+        id: 1, name: 'SafeStep — Adultos', cat: 'bastones', icon: '🦯',
+        images: ['viejo.avif', 'img/especificaciones.jpg', 'img/mama-hija.avif'],
+        price: 2000, old: 2999, rating: 4.8, reviews: 186, ship: true, official: true,
+        specs: ['ToF VL53L1X', 'MPU6050', 'App BT + GPS'],
+        reviewList: [
+          { name: 'Mariana G.', rating: 5, comment: 'Mi papá lo usa a diario, la alerta de caídas nos ha dado mucha tranquilidad.', date: '2026-06-02' },
+          { name: 'Luis R.', rating: 4, comment: 'Funciona muy bien, nos a servido de gran ayuda.', date: '2026-05-14' }
+        ]
+      },
+
+      // repuestos
+      {
+        id: 2, name: 'Cargador, carga rápida', cat: 'repuestos', icon: '🔧',
+        images: ['img/cargador.png'],
+        price: 450, old: 600, rating: 4.9, reviews: 16, ship: true, official: true,
+        specs: ['Tipo C'],
+        reviewList: [
+          { name: 'Isis Berlanga', rating: 5, comment: 'Funciona muy bien, llega rápido.', date: '2026-10-18' },
+          { name: 'Victoria Jiménez.', rating: 4, comment: 'Excelente producto.', date: '2026-05-14' }
+        ]
+      },
+
+      // baston niño
+      {
+        id: 3, name: 'SafeStep - Niños', cat: 'bastones', icon: '🔧',
+        images: ['img/nino-baston.avif'],
+        price: 2000, old: 2349, rating: 4.9, reviews: 16, ship: true, official: true,
+        specs: ['Adaptable Edad 1-10años'],
+        reviewList: [
+          { name: 'Isis Berlanga', rating: 5, comment: 'Funciona muy bien, llega rápido.', date: '2026-10-18' },
+          { name: 'Victoria Jiménez.', rating: 4, comment: 'Excelente producto.', date: '2026-05-14' }
+        ]
+      }
+
+    ];
+
+    const PAY_METHODS = [
+      { id: 'credito', icon: '<img src="tarjetas.png" alt="OXXO" style="height:24px; width:auto;">', name: 'Tarjeta de crédito o débito', detail: 'Visa, Mastercard, Amex — hasta 12 MSI' },
+      { id: 'oxxo', icon: '<img src="oxxo.png" alt="OXXO" style="height:24px; width:auto;">', name: 'Pago en efectivo (OXXO)', detail: 'Genera una ficha y paga en tienda' },];
+
+    /* ============ STATE ============ */
+    function loadCart() {
+      try {
+        // El carrito inicia vacío la primera vez.
+        const raw = localStorage.getItem('safestep-cart-v2');
+        if (!raw) return {};
+
+        const parsed = JSON.parse(raw);
+        const clean = {};
+
+        Object.entries(parsed).forEach(([id, qty]) => {
+          if (PRODUCTS.some(p => p.id === +id) && qty > 0) {
+            clean[id] = qty;
+          }
+        });
+
+        return clean;
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveCart() {
+      try {
+        localStorage.setItem(
+          'safestep-cart-v2',
+          JSON.stringify(state.cart)
+        );
+      } catch (e) {
+        /* almacenamiento no disponible */
+      }
+    }
+
+    function loadExtraReviews() {
+      try {
+        const raw = localStorage.getItem('safestep-reviews');
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) { return {}; }
+    }
+    function saveExtraReviews() {
+      try { localStorage.setItem('safestep-reviews', JSON.stringify(state.extraReviews)); } catch (e) { /* almacenamiento no disponible */ }
+    }
+
+    const state = {
+      category: 'all', search: '', sort: 'relevance', cart: loadCart(),
+      selected: {}, // id -> boolean, qué productos del carrito están marcados para comprar (estilo Mercado Libre)
+      extraReviews: loadExtraReviews(),
+      addresses: [],
+      selectedAddressId: null, selectedPayment: null, step: 'cart', lastOrder: null,
+      productModalId: null, galleryIndex: 0, reviewStars: 0,
+      card: { number: '', name: '', expiry: '', cvv: '' }, // datos del formulario de tarjeta
+    };
+    // Por defecto, todo lo que ya estaba en el carrito (de una sesión previa) queda seleccionado.
+    Object.keys(state.cart).forEach(id => { state.selected[id] = true; });
+
+    let nextAddrId = 1;
+    let orderCounter = 5412;
+    // El picker de cantidad ahora refleja directamente lo que ya hay en el carrito para ese producto,
+    // así que no necesita un contador aparte: se va guardando/acumulando en state.cart.
+    function getAddQty(id) { return state.cart[id] || 0; }
+
+    /* ============ HELPERS ============ */
+    const $ = (sel, ctx = document) => ctx.querySelector(sel);
+    const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
+    const fmt = n => n === 0 ? 'Gratis' : '$' + n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const byId = id => PRODUCTS.find(p => p.id === id);
+
+    function toast(msg) {
+      const t = $('#toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => t.classList.remove('show'), 2200);
+    }
+    function cartCount() { return Object.values(state.cart).reduce((a, b) => a + b, 0); }
+    function cartTotal() { return Object.entries(state.cart).reduce((sum, [id, qty]) => sum + byId(+id).price * qty, 0); }
+
+    /* ============ VALIDACIÓN DE TARJETA (real: Luhn + vencimiento + CVV) ============ */
+    function luhnValid(numStr) {
+      const digits = numStr.replace(/\D/g, '');
+      if (digits.length < 13 || digits.length > 19) return false;
+      let sum = 0, alt = false;
+      for (let i = digits.length - 1; i >= 0; i--) {
+        let n = parseInt(digits[i], 10);
+        if (alt) { n *= 2; if (n > 9) n -= 9; }
+        sum += n; alt = !alt;
+      }
+      return sum % 10 === 0;
+    }
+    function cardBrand(numStr) {
+      const digits = numStr.replace(/\D/g, '');
+      if (/^4/.test(digits)) return 'Visa';
+      if (/^(5[1-5]|2[2-7])/.test(digits)) return 'Mastercard';
+      if (/^3[47]/.test(digits)) return 'American Express';
+      return '';
+    }
+    function formatCardNumberInput(v) {
+      const digits = v.replace(/\D/g, '').slice(0, 19);
+      return digits.replace(/(.{4})/g, '$1 ').trim();
+    }
+    function formatExpiryInput(v) {
+      const digits = v.replace(/\D/g, '').slice(0, 4);
+      return digits.length >= 3 ? digits.slice(0, 2) + '/' + digits.slice(2) : digits;
+    }
+    function cardFieldErrors() {
+      const c = state.card;
+      const digits = (c.number || '').replace(/\D/g, '');
+      const errors = {};
+      if (!c.name || c.name.trim().length < 3) errors.name = 'Escribe el nombre tal como aparece en la tarjeta';
+      if (!digits || !luhnValid(digits)) errors.number = 'Número de tarjeta inválido';
+      const expMatch = /^(\d{2})\/(\d{2})$/.exec(c.expiry || '');
+      let expOk = false;
+      if (expMatch) {
+        const mm = parseInt(expMatch[1], 10);
+        const yy = parseInt(expMatch[2], 10);
+        if (mm >= 1 && mm <= 12) {
+          const now = new Date();
+          const curYY = now.getFullYear() % 100;
+          const curMM = now.getMonth() + 1;
+          expOk = yy > curYY || (yy === curYY && mm >= curMM);
+        }
+      }
+      if (!expOk) errors.expiry = 'Fecha inválida o vencida (usa MM/AA)';
+      if (!/^\d{3,4}$/.test(c.cvv || '')) errors.cvv = 'CVV inválido';
+      return errors;
+    }
+    function cardFormValid() { return Object.keys(cardFieldErrors()).length === 0; }
+
+    /* ============ FICHA OXXO (folio + vigencia) ============ */
+    function generateOxxoRef() {
+      let ref = '';
+      for (let i = 0; i < 14; i++) ref += Math.floor(Math.random() * 10);
+      return ref.match(/.{1,4}/g).join(' ');
+    }
+    function barcodeStripesHtml(ref) {
+      return ref.replace(/\D/g, '').split('').map(d => {
+        const n = parseInt(d, 10);
+        const w = (n % 3) + 2;
+        const h = 30 + n * 2;
+        return `<span style="width:${w}px;height:${h}px;"></span>`;
+      }).join('');
+    }
+    function oxxoExpiryLabel() {
+      const d = new Date(Date.now() + 48 * 60 * 60 * 1000);
+      return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) + ' · ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    /* ============ SELECCIÓN DE PRODUCTOS (estilo Mercado Libre) ============ */
+    function selectedCartIds() {
+      return Object.keys(state.cart).filter(id => state.selected[id]);
+    }
+    function selectedSubtotal() {
+      return selectedCartIds().reduce((sum, id) => sum + byId(+id).price * state.cart[id], 0);
+    }
+    function toggleSelect(id, checked) {
+      state.selected[id] = checked;
+      renderDrawer();
+    }
+    function toggleSelectAll(checked) {
+      Object.keys(state.cart).forEach(id => { state.selected[id] = checked; });
+      renderDrawer();
+    }
+
+    /* ============ REVIEWS PERSISTIDAS ============ */
+    function applyStoredReviews() {
+      Object.entries(state.extraReviews).forEach(([id, reviews]) => {
+        const p = byId(+id);
+        if (!p || !Array.isArray(reviews)) return;
+        reviews.forEach(r => {
+          p.reviewList.push(r);
+          p.rating = Math.round((((p.rating * p.reviews) + r.rating) / (p.reviews + 1)) * 10) / 10;
+          p.reviews += 1;
+        });
+      });
+    }
+
+    /* ============ RENDER: CATEGORIES ============ */
+    function renderCategories() {
+      const row = $('#cat-row');
+      row.innerHTML = CATEGORIES.map(c => `
+    <button class="cat-pill ${state.category === c.id ? 'active' : ''}" data-cat="${c.id}">
+      <span>${c.icon}</span><span>${c.name}</span>
+    </button>
+  `).join('');
+      $$('.cat-pill', row).forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.cat === 'servicios') {
+            window.location.href = 'garantia.html';
+            return;
+          }
+          state.category = btn.dataset.cat;
+          renderCategories();
+          renderProducts();
+        });
+      });
+      const cur = CATEGORIES.find(c => c.id === state.category);
+      $('#breadcrumb').innerHTML = cur.id === 'all' ? 'SafeStep Store' : `SafeStep Store <span>›</span> <b>${cur.name}</b>`;
+    }
+
+    /* ============ RENDER: PRODUCTS ============ */
+    function getFilteredProducts() {
+      let list = PRODUCTS.filter(p => {
+        const matchCat = state.category === 'all' || p.cat === state.category;
+        const matchSearch = !state.search || p.name.toLowerCase().includes(state.search.toLowerCase());
+        return matchCat && matchSearch;
+      });
+      if (state.sort === 'price-asc') list = list.slice().sort((a, b) => a.price - b.price);
+      if (state.sort === 'price-desc') list = list.slice().sort((a, b) => b.price - a.price);
+      if (state.sort === 'rating') list = list.slice().sort((a, b) => b.rating - a.rating);
+      return list;
+    }
+
+    function renderProducts() {
+      const list = getFilteredProducts();
+      const grid = $('#product-grid');
+      const noRes = $('#no-results');
+      const catName = CATEGORIES.find(c => c.id === state.category).name;
+
+      $('#results-title').textContent = state.search ? `Resultados para "${state.search}"` : (state.category === 'all' ? 'Todos los productos' : catName);
+      $('#results-count').textContent = `${list.length} producto${list.length === 1 ? '' : 's'}`;
+
+      if (list.length === 0) { grid.innerHTML = ''; noRes.hidden = false; return; }
+      noRes.hidden = true;
+
+      grid.innerHTML = list.map(p => {
+        const off = p.old ? Math.round((1 - p.price / p.old) * 100) : null;
+        const stars = '★★★★★'.slice(0, Math.round(p.rating)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(p.rating));
+        const msi = p.price > 0 ? Math.round(p.price / 12) : 0;
+        const firstImg = p.images && p.images[0];
+        return `
+    <article class="card">
+      <div class="thumb ss-thumb ss-card-open" style="background:${thumbColor(p.cat)}" data-viewproduct="${p.id}">
+        ${off ? `<span class="badge-off">-${off}%</span>` : ''}
+        ${firstImg ? `<img src="${firstImg}" alt="${p.name}" class="ss-thumb-img">` : `<span>${p.icon}</span>`}
+      </div>
+      ${p.official ? `<span class="official-badge"><svg viewBox="0 0 24 24"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.5 7.2 16.9l.9-5.4-3.9-3.8 5.4-.8z"/></svg>Tienda oficial</span>` : ''}
+      ${p.specs ? `<div class="specs-row">${p.specs.map(s => `<span class="spec-tag">${s}</span>`).join('')}</div>` : ''}
+      <h3 class="ss-card-open" data-viewproduct="${p.id}">${p.name}</h3>
+      <div class="rating ss-card-open" data-viewproduct="${p.id}"><span class="stars">${stars}</span><span>(${p.reviews})</span></div>
+      <div class="price-row"><span class="price">${fmt(p.price)}</span></div>
+      ${p.old ? `<span class="price-old">Antes ${fmt(p.old)}</span>` : ''}
+      ${p.price > 0 ? `<span class="installments">en 12x ${fmt(msi)} sin interés</span>` : ''}
+      ${p.ship ? `<span class="badge-ship">Envío gratis</span>` : ''}
+      <span class="seller-line">Vendido por SafeStep Oficial</span>
+      <div class="ss-addrow">
+        <div class="ss-qty-picker">
+          <button type="button" class="qty-btn" data-qdec="${p.id}">−</button>
+          <span class="qty-val" data-qval="${p.id}">${getAddQty(p.id)}</span>
+          <button type="button" class="qty-btn" data-qinc="${p.id}">+</button>
+        </div>
+        <button class="add-btn" data-add="${p.id}">Agregar al carrito</button>
+      </div>
+    </article>`;
+      }).join('');
+
+      $$('[data-add]', grid).forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = +btn.dataset.add;
+          addToCart(id, 1);
+          const valEl = grid.querySelector(`[data-qval="${id}"]`);
+          if (valEl) valEl.textContent = getAddQty(id);
+          btn.textContent = '✓ Agregado';
+          btn.classList.add('added');
+          setTimeout(() => { btn.textContent = 'Agregar al carrito'; btn.classList.remove('added'); }, 1100);
+        });
+      });
+
+      $$('[data-qinc]', grid).forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = +btn.dataset.qinc;
+          addToCart(id, 1);
+          grid.querySelector(`[data-qval="${id}"]`).textContent = getAddQty(id);
+        });
+      });
+      $$('[data-qdec]', grid).forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = +btn.dataset.qdec;
+          setQty(id, Math.max(0, getAddQty(id) - 1));
+          grid.querySelector(`[data-qval="${id}"]`).textContent = getAddQty(id);
+        });
+      });
+
+      $$('[data-viewproduct]', grid).forEach(el => {
+        el.addEventListener('click', () => openProductModal(+el.dataset.viewproduct));
+      });
+    }
+
+    /* ============ LIGHTBOX (ver imagen en grande) ============ */
+    const lightbox = $('#ss-lightbox');
+    const lightboxImg = $('#ss-lightbox-img');
+    function openLightbox(src) {
+      lightboxImg.src = src;
+      lightbox.classList.add('open');
+    }
+    function closeLightbox() { lightbox.classList.remove('open'); lightboxImg.src = ''; }
+    lightbox.addEventListener('click', closeLightbox);
+    $('#ss-lightbox-close').addEventListener('click', closeLightbox);
+
+    function thumbColor(cat) {
+      const map = { bastones: '#EDE7FB', accesorios: '#FFF3D6', repuestos: '#E6F7EE', servicios: '#FBEAF4' };
+      return map[cat] || '#F0F0F0';
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    /* ============ MODAL DE PRODUCTO (galería + reseñas) ============ */
+    const modalOverlay = $('#ss-modal-overlay');
+    const modalEl = $('#ss-modal');
+
+    function openProductModal(id) {
+      state.productModalId = id;
+      state.galleryIndex = 0;
+      state.reviewStars = 0;
+      modalOverlay.classList.add('open');
+      renderProductModal();
+    }
+    function closeProductModal() {
+      modalOverlay.classList.remove('open');
+      state.productModalId = null;
+    }
+    modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeProductModal(); });
+
+    function renderProductModal() {
+      const p = byId(state.productModalId);
+      if (!p) return;
+      const images = (p.images && p.images.length) ? p.images : null;
+      const stars = '★★★★★'.slice(0, Math.round(p.rating)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(p.rating));
+      const msi = p.price > 0 ? Math.round(p.price / 12) : 0;
+
+      const galleryHtml = images ? `
+      <div class="ss-gallery-main" style="background:${thumbColor(p.cat)}">
+        ${images.length > 1 ? `<button class="ss-gallery-nav prev" id="gal-prev" aria-label="Foto anterior">‹</button>` : ''}
+        <img src="${images[state.galleryIndex]}" alt="${p.name}" id="gal-main-img">
+        ${images.length > 1 ? `<button class="ss-gallery-nav next" id="gal-next" aria-label="Foto siguiente">›</button>` : ''}
+      </div>
+      ${images.length > 1 ? `<div class="ss-gallery-thumbs">${images.map((img, i) => `<button class="ss-gallery-thumb ${i === state.galleryIndex ? 'active' : ''}" data-galidx="${i}"><img src="${img}" alt="Foto ${i + 1} de ${p.name}"></button>`).join('')}</div>` : ''}
+    ` : `<div class="ss-gallery-main" style="background:${thumbColor(p.cat)}"><span>${p.icon}</span></div>`;
+
+      const reviewsHtml = p.reviewList.length
+        ? p.reviewList.slice().reverse().map(r => `
+        <div class="ss-review-item">
+          <span class="who">${escapeHtml(r.name)}</span>
+          <span class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+          <span class="date">${r.date}</span>
+          <p>${escapeHtml(r.comment)}</p>
+        </div>`).join('')
+        : `<div class="ss-no-reviews">Todavía no hay reseñas para este producto. ¡Sé la primera persona en escribir una!</div>`;
+
+      modalEl.innerHTML = `
+      <button class="ss-modal-close" id="ss-modal-close" aria-label="Cerrar">✕</button>
+      <div class="ss-modal-grid">
+        <div>${galleryHtml}</div>
+        <div class="ss-modal-info">
+          ${p.official ? `<span class="official-badge"><svg viewBox="0 0 24 24"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.5 7.2 16.9l.9-5.4-3.9-3.8 5.4-.8z"/></svg>Tienda oficial</span>` : ''}
+          <h2>${p.name}</h2>
+          <div class="rating"><span class="stars">${stars}</span><span>(${p.reviews})</span></div>
+          <div class="price-row"><span class="price">${fmt(p.price)}</span></div>
+          ${p.old ? `<span class="price-old">Antes ${fmt(p.old)}</span>` : ''}
+          ${p.price > 0 ? `<span class="installments">en 12x ${fmt(msi)} sin interés</span>` : ''}
+          ${p.specs ? `<div class="specs-row">${p.specs.map(s => `<span class="spec-tag">${s}</span>`).join('')}</div>` : ''}
+          <div class="ss-addrow" style="margin-top:14px;">
+            <div class="ss-qty-picker">
+              <button type="button" class="qty-btn" data-mqdec>−</button>
+              <span class="qty-val" id="ss-modal-qty">${getAddQty(p.id)}</span>
+              <button type="button" class="qty-btn" data-mqinc>+</button>
+            </div>
+            <button class="add-btn" id="ss-modal-add">Agregar al carrito</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ss-modal-reviews">
+        <div class="ss-review-summary">
+          <span class="avg">${p.rating.toFixed(1)}</span>
+          <span class="stars">${stars}</span>
+          <span style="color:#999; font-size:.85rem;">(${p.reviews} reseñas)</span>
+        </div>
+        <div id="ss-review-list">${reviewsHtml}</div>
+
+        <div class="ss-review-form">
+          <div class="section-title" style="font-size:.9rem; margin-bottom:8px;">Escribir una reseña</div>
+          <div class="ss-star-input" id="ss-star-input">
+            ${[1, 2, 3, 4, 5].map(n => `<span data-star="${n}">★</span>`).join('')}
+          </div>
+          <input type="text" id="ss-review-name" placeholder="Tu nombre">
+          <textarea id="ss-review-comment" placeholder="Cuéntanos tu experiencia con el producto…"></textarea>
+          <button class="primary-btn" id="ss-review-submit" type="button">Publicar reseña</button>
+        </div>
+      </div>
+    `;
+
+      $('#ss-modal-close', modalEl).addEventListener('click', closeProductModal);
+
+      if (images && images.length > 1) {
+        $('#gal-prev', modalEl).addEventListener('click', () => { state.galleryIndex = (state.galleryIndex - 1 + images.length) % images.length; renderProductModal(); });
+        $('#gal-next', modalEl).addEventListener('click', () => { state.galleryIndex = (state.galleryIndex + 1) % images.length; renderProductModal(); });
+        $$('[data-galidx]', modalEl).forEach(btn => {
+          btn.addEventListener('click', () => { state.galleryIndex = +btn.dataset.galidx; renderProductModal(); });
+        });
+      }
+      if (images) {
+        $('#gal-main-img', modalEl).addEventListener('click', () => openLightbox(images[state.galleryIndex]));
+      }
+
+      $('[data-mqinc]', modalEl).addEventListener('click', () => {
+        addToCart(p.id, 1);
+        $('#ss-modal-qty', modalEl).textContent = getAddQty(p.id);
+        renderProducts();
+      });
+      $('[data-mqdec]', modalEl).addEventListener('click', () => {
+        setQty(p.id, Math.max(0, getAddQty(p.id) - 1));
+        $('#ss-modal-qty', modalEl).textContent = getAddQty(p.id);
+        renderProducts();
+      });
+      $('#ss-modal-add', modalEl).addEventListener('click', () => {
+        addToCart(p.id, 1);
+        $('#ss-modal-qty', modalEl).textContent = getAddQty(p.id);
+        renderProducts();
+      });
+
+      function updateStarInput() {
+        $$('[data-star]', modalEl).forEach(el => {
+          el.classList.toggle('filled', +el.dataset.star <= state.reviewStars);
+        });
+      }
+      $$('[data-star]', modalEl).forEach(el => {
+        el.addEventListener('click', () => { state.reviewStars = +el.dataset.star; updateStarInput(); });
+      });
+      updateStarInput();
+
+      $('#ss-review-submit', modalEl).addEventListener('click', () => {
+        const name = $('#ss-review-name', modalEl).value.trim();
+        const comment = $('#ss-review-comment', modalEl).value.trim();
+        if (!state.reviewStars) { toast('Selecciona una calificación en estrellas'); return; }
+        if (!name || !comment) { toast('Escribe tu nombre y tu comentario'); return; }
+        const today = new Date().toISOString().slice(0, 10);
+        const newReview = { name, rating: state.reviewStars, comment, date: today };
+        p.reviewList.push(newReview);
+        p.rating = Math.round((((p.rating * p.reviews) + newReview.rating) / (p.reviews + 1)) * 10) / 10;
+        p.reviews += 1;
+        if (!state.extraReviews[p.id]) state.extraReviews[p.id] = [];
+        state.extraReviews[p.id].push(newReview);
+        saveExtraReviews();
+        state.reviewStars = 0;
+        toast('¡Gracias por tu reseña!');
+        renderProductModal();
+        renderProducts();
+      });
+    }
+
+    /* ============ CART LOGIC ============ */
+    function addToCart(id, qty = 1) {
+      state.cart[id] = (state.cart[id] || 0) + qty;
+      if (state.selected[id] === undefined) state.selected[id] = true;
+      saveCart();
+      updateCartBadge();
+      toast(qty > 1 ? `${qty} productos agregados al carrito` : 'Producto agregado al carrito');
+    }
+    function setQty(id, qty) {
+      if (qty <= 0) { delete state.cart[id]; delete state.selected[id]; } else state.cart[id] = qty;
+      saveCart();
+      updateCartBadge();
+      renderDrawer();
+    }
+    function updateCartBadge() {
+      const c = cartCount();
+      const badge = $('#cart-count');
+      badge.textContent = c;
+      badge.hidden = c === 0;
+    }
+
+    /* ============ DRAWER / CHECKOUT FLOW ============ */
+    const overlay = $('#overlay');
+    const drawer = $('#drawer');
+
+    function openDrawer(step) {
+      state.step = step || 'cart';
+      overlay.classList.add('open');
+      drawer.classList.add('open');
+      renderDrawer();
+    }
+    function closeDrawer() { overlay.classList.remove('open'); drawer.classList.remove('open'); }
+    $('#btn-cart').addEventListener('click', () => openDrawer('cart'));
+    $('#btn-addresses').addEventListener('click', () => openDrawer('address'));
+    $('#drawer-close').addEventListener('click', closeDrawer);
+    overlay.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); closeLightbox(); closeProductModal(); } });
+
+    function renderDrawer() {
+      const title = $('#drawer-title');
+      const body = $('#drawer-body');
+      const foot = $('#drawer-foot');
+      const steps = ['cart', 'address', 'payment', 'confirm'];
+      const stepIdx = steps.indexOf(state.step);
+      const stepTrack = state.step !== 'cart' ? `<div class="step-track">${steps.slice(1).map((s, i) => `<span class="${i <= stepIdx - 1 ? 'done' : ''}"></span>`).join('')}</div>` : '';
+
+      if (state.step === 'cart') {
+        title.textContent = 'Tu carrito';
+        const ids = Object.keys(state.cart);
+        if (ids.length === 0) {
+          body.innerHTML = `<div class="drawer-body centered">
+        <div style="font-size:2.4rem">🛒</div>
+        <p>Tu carrito está vacío.<br>Agrega productos para comenzar.</p>
+      </div>`;
+          foot.innerHTML = `<button class="ghost-btn" id="go-shop">Seguir comprando</button>`;
+          $('#go-shop').addEventListener('click', closeDrawer);
+          return;
+        }
+
+        const allSelected = ids.length > 0 && ids.every(id => state.selected[id]);
+
+        body.innerHTML = `
+      <label class="cart-select-all">
+        <input type="checkbox" id="select-all-cb" ${allSelected ? 'checked' : ''}>
+        <span>Seleccionar todos (${ids.length} producto${ids.length === 1 ? '' : 's'})</span>
+      </label>
+    ` + ids.map(id => {
+          const p = byId(+id); const qty = state.cart[id];
+          const isSel = !!state.selected[id];
+          const lineTotal = p.price * qty;
+          return `
+      <div class="cart-item ${isSel ? '' : 'unselected'}">
+        <div class="cart-item-checkbox">
+          <input type="checkbox" data-select="${id}" ${isSel ? 'checked' : ''} aria-label="Seleccionar ${p.name}">
+        </div>
+        <div class="thumb ss-thumb" style="background:${thumbColor(p.cat)}">${p.images && p.images[0] ? `<img src="${p.images[0]}" alt="${p.name}" class="ss-thumb-img">` : p.icon}</div>
+        <div class="cart-item-info">
+          <h4>${p.name}</h4>
+          ${p.ship ? `<span class="free-badge">Envío gratis</span>` : ''}
+          <div><span class="price" style="font-size:.95rem">${fmt(p.price)}</span></div>
+          <div class="qty-row">
+            <button class="qty-btn" data-dec="${id}">−</button>
+            <span class="qty-val">${qty}</span>
+            <button class="qty-btn" data-inc="${id}">+</button>
+            <button class="remove-link" data-remove="${id}">Eliminar</button>
+          </div>
+        </div>
+        <div class="cart-item-subtotal">${fmt(lineTotal)}</div>
+      </div>`;
+        }).join('');
+
+        const selectAllCb = $('#select-all-cb', body);
+        if (selectAllCb) selectAllCb.addEventListener('change', e => toggleSelectAll(e.target.checked));
+        $$('[data-select]', body).forEach(cb => {
+          cb.addEventListener('change', e => toggleSelect(cb.dataset.select, e.target.checked));
+        });
+
+        $$('[data-inc]', body).forEach(b => b.addEventListener('click', () => setQty(+b.dataset.inc, state.cart[b.dataset.inc] + 1)));
+        $$('[data-dec]', body).forEach(b => b.addEventListener('click', () => setQty(+b.dataset.dec, state.cart[b.dataset.dec] - 1)));
+        $$('[data-remove]', body).forEach(b => b.addEventListener('click', () => setQty(+b.dataset.remove, 0)));
+
+        const selIds = selectedCartIds();
+        const subtotal = selectedSubtotal();
+        const shipping = selIds.length === 0 ? 0 : (subtotal >= 999 ? 0 : 129);
+        const missingForFreeShip = subtotal > 0 && subtotal < 999 ? (999 - subtotal) : 0;
+
+        foot.innerHTML = `
+      ${missingForFreeShip > 0 ? `<div class="ship-progress-note">🚚 Te faltan ${fmt(missingForFreeShip)} en productos seleccionados para tener envío gratis</div>` : ''}
+      <div class="total-row"><span>Subtotal (${selIds.length} producto${selIds.length === 1 ? '' : 's'})</span><span>${fmt(subtotal)}</span></div>
+      <div class="total-row"><span>Envío</span><span>${selIds.length === 0 ? '—' : (shipping === 0 ? 'Gratis' : fmt(shipping))}</span></div>
+      <div class="total-row grand"><span>Total</span><span>${fmt(subtotal + shipping)}</span></div>
+      <button class="primary-btn ml-buy-btn" id="go-address" ${selIds.length === 0 ? 'disabled' : ''}>Continuar compra${selIds.length ? ` (${selIds.length})` : ''}</button>
+      <button class="ghost-btn" id="clear-cart">Vaciar carrito</button>
+    `;
+        $('#go-address').addEventListener('click', () => {
+          if (selectedCartIds().length === 0) { toast('Selecciona al menos un producto para continuar'); return; }
+          openDrawer('address');
+        });
+        $('#clear-cart').addEventListener('click', () => {
+          state.cart = {};
+          state.selected = {};
+          saveCart();
+          updateCartBadge();
+          renderDrawer();
+          toast('Carrito vaciado');
+        });
+        return;
+      }
+
+      if (state.step === 'address') {
+        title.textContent = 'Dirección de envío';
+        body.innerHTML = stepTrack + `
+      <div class="section-title">Elige dónde recibir tu pedido</div>
+      ${state.addresses.length === 0 ? `<p style="color:var(--ink-soft); font-size:.85rem;">Aún no tienes ninguna dirección guardada. Agrega una para continuar.</p>` : ''}
+      <div id="addr-list"></div>
+      <button class="ghost-btn" id="show-new-addr">+ Agregar nueva dirección</button>
+      <div id="new-addr-form" style="display:none; margin-top:14px;"></div>
+    `;
+        renderAddressList();
+        $('#show-new-addr').addEventListener('click', () => {
+          const f = $('#new-addr-form');
+          f.style.display = f.style.display === 'none' ? 'block' : 'none';
+          f.innerHTML = `
+        <div class="section-title" style="font-size:.88rem">Nueva dirección</div>
+        <div class="field"><label for="a-name">Nombre completo</label><input id="a-name" placeholder="Nombre y apellido"></div>
+        <div class="field"><label for="a-street">Calle y número</label><input id="a-street" placeholder="Calle, número, colonia"></div>
+        <div class="field-row">
+          <div class="field"><label for="a-city">Ciudad / Estado</label><input id="a-city" placeholder="Linares, Nuevo León"></div>
+          <div class="field"><label for="a-zip">Código postal</label><input id="a-zip" placeholder="67700"></div>
+        </div>
+        <div class="field"><label for="a-phone">Teléfono de contacto</label><input id="a-phone" placeholder="10 dígitos"></div>
+        <button class="primary-btn" id="save-addr" type="button">Guardar dirección</button>
+      `;
+          $('#save-addr').addEventListener('click', () => {
+            const who = $('#a-name').value.trim();
+            const street = $('#a-street').value.trim();
+            const city = $('#a-city').value.trim();
+            const zip = $('#a-zip').value.trim();
+            const phone = $('#a-phone').value.trim();
+            if (!who || !street || !city || !zip || !phone) { toast('Completa todos los campos de la dirección'); return; }
+            const addr = { id: nextAddrId++, who, tag: 'Nueva', street, city, zip, phone };
+            state.addresses.push(addr);
+            state.selectedAddressId = addr.id;
+            toast('Dirección guardada');
+            renderDrawer();
+          });
+        });
+        foot.innerHTML = `
+      <button class="primary-btn ml-buy-btn" id="go-payment">Continuar al pago</button>
+      <button class="ghost-btn" id="back-cart">Volver al carrito</button>
+    `;
+        $('#go-payment').addEventListener('click', () => {
+          if (!state.selectedAddressId) { toast('Selecciona una dirección'); return; }
+          openDrawer('payment');
+        });
+        $('#back-cart').addEventListener('click', () => openDrawer('cart'));
+        return;
+      }
+
+      if (state.step === 'payment') {
+        title.textContent = 'Método de pago';
+        body.innerHTML = stepTrack + `<div class="section-title">¿Cómo quieres pagar?</div><div id="pay-list"></div><div id="pay-detail"></div>`;
+        const list = $('#pay-list');
+        list.innerHTML = PAY_METHODS.map(m => `
+      <label class="pay-option ${state.selectedPayment === m.id ? 'selected' : ''}" data-pay="${m.id}">
+        <input type="radio" name="pay" value="${m.id}" ${state.selectedPayment === m.id ? 'checked' : ''}>
+        <span class="pay-icon">${m.icon}</span>
+        <span><div class="who">${m.name}</div><div class="detail">${m.detail}</div></span>
+      </label>
+    `).join('');
+        $$('.pay-option', list).forEach(el => {
+          el.addEventListener('click', () => { state.selectedPayment = el.dataset.pay; renderDrawer(); });
+        });
+
+        const detail = $('#pay-detail');
+        if (state.selectedPayment === 'credito') {
+          const errs = cardFieldErrors();
+          const brand = cardBrand(state.card.number);
+          detail.innerHTML = `
+        <div class="card-form">
+          <div class="field">
+            <label for="cc-name">Nombre del titular</label>
+            <input type="text" id="cc-name" placeholder="Como aparece en la tarjeta" value="${escapeHtml(state.card.name)}" autocomplete="cc-name">
+          </div>
+          <div class="field">
+            <label for="cc-number">Número de tarjeta ${brand ? `<span class="card-brand">· ${brand}</span>` : ''}</label>
+            <input type="text" id="cc-number" inputmode="numeric" placeholder="0000 0000 0000 0000" value="${escapeHtml(state.card.number)}" autocomplete="cc-number">
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="cc-expiry">Vencimiento</label>
+              <input type="text" id="cc-expiry" inputmode="numeric" placeholder="MM/AA" value="${escapeHtml(state.card.expiry)}" autocomplete="cc-exp">
+            </div>
+            <div class="field">
+              <label for="cc-cvv">CVV</label>
+              <input type="text" id="cc-cvv" inputmode="numeric" placeholder="123" value="${escapeHtml(state.card.cvv)}" autocomplete="cc-csc">
+            </div>
+          </div>
+        </div>
+      `;
+          $('#cc-name', detail).addEventListener('input', e => { state.card.name = e.target.value; syncCardValidity(); });
+          $('#cc-number', detail).addEventListener('input', e => {
+            const pos = e.target.selectionStart;
+            const before = e.target.value.length;
+            e.target.value = formatCardNumberInput(e.target.value);
+            state.card.number = e.target.value;
+            e.target.selectionStart = e.target.selectionEnd = pos + (e.target.value.length - before);
+            syncCardValidity();
+          });
+          $('#cc-expiry', detail).addEventListener('input', e => {
+            e.target.value = formatExpiryInput(e.target.value);
+            state.card.expiry = e.target.value;
+            syncCardValidity();
+          });
+          $('#cc-cvv', detail).addEventListener('input', e => {
+            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+            state.card.cvv = e.target.value;
+            syncCardValidity();
+          });
+        } else if (state.selectedPayment === 'oxxo') {
+          detail.innerHTML = `
+<div class="oxxo-note"><img src="oxxo.png" alt="OXXO" style="height:18px; width:auto; vertical-align:middle; margin-right:4px;"> Al confirmar se generará una ficha con folio único. Tendrás <b>48 horas</b> para pagar en cualquier tienda OXXO; tu pedido se confirma en cuanto se registre el pago.</div>      `;
+        } else {
+          detail.innerHTML = '';
+        }
+
+        function syncCardValidity() {
+          const btn = $('#go-confirm', foot);
+          if (btn) btn.disabled = !cardFormValid();
+        }
+
+        const subtotal = selectedSubtotal();
+        const shipping = subtotal >= 999 ? 0 : 129;
+        const needsCard = state.selectedPayment === 'credito';
+        const disableConfirm = !state.selectedPayment || (needsCard && !cardFormValid());
+        foot.innerHTML = `
+      <div class="total-row grand"><span>Total a pagar</span><span>${fmt(subtotal + shipping)}</span></div>
+      <button class="primary-btn ml-buy-btn" id="go-confirm" ${disableConfirm ? 'disabled' : ''}>Confirmar y pagar</button>
+      <button class="ghost-btn" id="back-address">Volver a dirección</button>
+    `;
+        $('#go-confirm').addEventListener('click', placeOrder);
+        $('#back-address').addEventListener('click', () => openDrawer('address'));
+        return;
+      }
+
+      if (state.step === 'confirm') {
+        const o = state.lastOrder;
+
+        if (o.pending) {
+          title.textContent = 'Ficha de pago generada';
+          body.innerHTML = `
+        <div class="confirm-box">
+<div><img src="oxxo.png" alt="OXXO" style="height:48px; width:auto; display:inline-block;"></div>          <h3 style="font-family:var(--font-head); font-size:1.05rem;">Paga en cualquier tienda OXXO</h3>
+          <p style="color:var(--ink-soft); font-size:.83rem; margin-top:6px;">Muestra este folio en caja, o pégalo en la app de OXXO. Tu pedido se confirma automáticamente al recibir el pago.</p>
+          <div class="oxxo-ticket">
+            <div class="oxxo-barcode">${barcodeStripesHtml(o.oxxoRef)}</div>
+            <div class="oxxo-ref">${o.oxxoRef}</div>
+            <button class="ghost-btn" id="copy-ref" type="button">Copiar folio</button>
+          </div>
+          <div class="order-ticket">
+            <div><span>Número de orden</span><span class="num">#${o.number}</span></div>
+            <div><span>Monto a pagar</span><span class="num">${fmt(o.total)}</span></div>
+            <div><span>Vence</span><span>${o.oxxoExpiry}</span></div>
+            <div><span>Enviar a</span><span>${o.address.who}</span></div>
+          </div>
+          <p style="color:#aaa; font-size:.72rem; margin-top:8px;">(OXXO lo confirmará automáticamente)</p>
+        </div>
+      `;
+          foot.innerHTML = `<button class="ghost-btn" id="finish">Seguir comprando</button>`;
+          $('#finish').addEventListener('click', closeDrawer);
+          $('#copy-ref').addEventListener('click', () => {
+            const raw = o.oxxoRef.replace(/\s/g, '');
+            if (navigator.clipboard) { navigator.clipboard.writeText(raw); toast('Folio copiado'); }
+          });
+          $('#simulate-paid').addEventListener('click', () => {
+            o.pending = false;
+            toast('Pago confirmado (simulado)');
+            renderDrawer();
+          });
+          return;
+        }
+
+        title.textContent = '¡Compra realizada!';
+        body.innerHTML = `
+      <div class="confirm-box">
+        <div class="check">✓</div>
+        <h3 style="font-family:var(--font-head); font-size:1.05rem;">Gracias por tu compra</h3>
+        <p style="color:var(--ink-soft); font-size:.83rem; margin-top:6px;">Te enviamos la confirmación y el seguimiento de tu pedido.</p>
+        <div class="order-ticket">
+          <div><span>Número de orden</span><span class="num">#${o.number}</span></div>
+          <div><span>Productos</span><span>${o.itemCount}</span></div>
+          <div><span>Enviar a</span><span>${o.address.who}</span></div>
+          <div><span>Dirección</span><span>${o.address.street}</span></div>
+          <div><span>Pago</span><span>${o.paymentName}</span></div>
+          <div><span>Total</span><span class="num">${fmt(o.total)}</span></div>
+        </div>
+        <div style="margin-top:14px;"><span class="stamp">ENTREGA ESTIMADA 3–5 DÍAS</span></div>
+        ${Object.keys(state.cart).length > 0 ? `<p style="color:var(--ink-soft); font-size:.78rem; margin-top:12px;">Los demás productos que dejaste sin marcar siguen guardados en tu carrito.</p>` : ''}
+      </div>
+    `;
+        foot.innerHTML = `<button class="primary-btn" id="finish">Seguir comprando</button>`;
+        $('#finish').addEventListener('click', closeDrawer);
+        return;
+      }
+    }
+
+    function renderAddressList() {
+      const wrap = $('#addr-list');
+      if (!wrap) return;
+      wrap.innerHTML = state.addresses.map(a => `
+    <label class="addr-card ${state.selectedAddressId === a.id ? 'selected' : ''}" data-addr="${a.id}">
+      <input type="radio" name="addr" value="${a.id}" ${state.selectedAddressId === a.id ? 'checked' : ''}>
+      <span>
+        <span class="who">${a.who}</span><span class="addr-tag">${a.tag}</span>
+        <div class="detail">${a.street}<br>${a.city}, CP ${a.zip}<br>Tel: ${a.phone}</div>
+      </span>
+    </label>
+  `).join('');
+      $$('.addr-card', wrap).forEach(el => {
+        el.addEventListener('click', () => { state.selectedAddressId = +el.dataset.addr; renderAddressList(); });
+      });
+    }
+
+    function placeOrder() {
+      if (!state.selectedPayment) return;
+      if (state.selectedPayment === 'credito' && !cardFormValid()) {
+        toast('Revisa los datos de tu tarjeta');
+        return;
+      }
+      const selIds = selectedCartIds();
+      if (selIds.length === 0) { toast('No hay productos seleccionados para comprar'); return; }
+      const subtotal = selIds.reduce((sum, id) => sum + byId(+id).price * state.cart[id], 0);
+      const shipping = subtotal >= 999 ? 0 : 129;
+      const addr = state.addresses.find(a => a.id === state.selectedAddressId);
+      const payName = PAY_METHODS.find(m => m.id === state.selectedPayment).name;
+      state.lastOrder = { number: orderCounter++, address: addr, paymentName: payName, total: subtotal + shipping, itemCount: selIds.length };
+      if (state.selectedPayment === 'oxxo') {
+        state.lastOrder.pending = true;
+        state.lastOrder.oxxoRef = generateOxxoRef();
+        state.lastOrder.oxxoExpiry = oxxoExpiryLabel();
+      }
+      // Solo se quitan del carrito los productos que estaban seleccionados; el resto se queda guardado.
+      selIds.forEach(id => { delete state.cart[id]; delete state.selected[id]; });
+      state.card = { number: '', name: '', expiry: '', cvv: '' };
+      saveCart();
+      updateCartBadge();
+      openDrawer('confirm');
+    }
+
+    /* ============ SEARCH ============ */
+    const searchInput = $('#search-input');
+    const searchForm = $('#search-form');
+    const suggestBox = $('#search-suggest');
+
+    searchForm.addEventListener('submit', e => {
+      e.preventDefault();
+      state.search = searchInput.value.trim();
+      suggestBox.classList.remove('open');
+      renderProducts();
+    });
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) { suggestBox.classList.remove('open'); return; }
+      const matches = PRODUCTS.filter(p => p.name.toLowerCase().includes(q)).slice(0, 6);
+      if (matches.length === 0) { suggestBox.classList.remove('open'); return; }
+      suggestBox.innerHTML = matches.map(p => {
+        const idx = p.name.toLowerCase().indexOf(q);
+        const before = p.name.slice(0, idx);
+        const match = p.name.slice(idx, idx + q.length);
+        const after = p.name.slice(idx + q.length);
+        return `<button type="button" data-goto="${p.name.replace(/"/g, '&quot;')}">${before}<b>${match}</b>${after} <span style="font-family:var(--font-mono); color:var(--ink-soft)">${fmt(p.price)}</span></button>`;
+      }).join('');
+      suggestBox.classList.add('open');
+      $$('[data-goto]', suggestBox).forEach(b => {
+        b.addEventListener('click', () => {
+          searchInput.value = b.dataset.goto;
+          state.search = b.dataset.goto;
+          suggestBox.classList.remove('open');
+          renderProducts();
+        });
+      });
+    });
+    document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) suggestBox.classList.remove('open'); });
+
+    $('#sort-select').addEventListener('change', e => { state.sort = e.target.value; renderProducts(); });
+
+    /* ============ INIT ============ */
+    applyStoredReviews();
+    renderCategories();
+    renderProducts();
+    updateCartBadge();
+  </script>
+</body>
+
+</html>
